@@ -39,19 +39,20 @@ optional arguments:
 In this example I have specified the following I am executing `grep foo`, which will just hang indefinitely, to show how this operates.
 
 ```
-$ python gpu_idle_timeout.py -t 10 -s 10 -n 5 -d 3 -x grep foo
-2024-03-14 15:53:17,743: INFO: gpu_idle_timeout: Starting GPU idle watcher: threshhold_percentage=10%, sample_freq=10, num_samples=5, delay_samples=3, window_size=50
-2024-03-14 15:53:27,753: INFO: gpu_idle_timeout: waiting for delay samples. 20 seconds left
-2024-03-14 15:53:37,763: INFO: gpu_idle_timeout: waiting for delay samples. 10 seconds left
-2024-03-14 15:53:47,793: DEBUG: gpu_idle_timeout: GPU-a5b02c30-9c95-cb81-e41e-ca204d57aa3b usage 0%
-2024-03-14 15:53:47,793: DEBUG: gpu_idle_timeout: GPU-b805d632-775b-c673-fe68-26b26996cd09 usage 0%
-2024-03-14 15:53:57,821: DEBUG: gpu_idle_timeout: GPU-a5b02c30-9c95-cb81-e41e-ca204d57aa3b usage 0%
-2024-03-14 15:53:57,821: DEBUG: gpu_idle_timeout: GPU-b805d632-775b-c673-fe68-26b26996cd09 usage 0%
-2024-03-14 15:54:07,850: DEBUG: gpu_idle_timeout: GPU-a5b02c30-9c95-cb81-e41e-ca204d57aa3b usage 0%
-2024-03-14 15:54:07,850: DEBUG: gpu_idle_timeout: GPU-b805d632-775b-c673-fe68-26b26996cd09 usage 0%
-2024-03-14 15:54:17,880: DEBUG: gpu_idle_timeout: GPU-a5b02c30-9c95-cb81-e41e-ca204d57aa3b usage 0%
-2024-03-14 15:54:17,880: DEBUG: gpu_idle_timeout: GPU-b805d632-775b-c673-fe68-26b26996cd09 usage 0%
-2024-03-14 15:54:27,910: DEBUG: gpu_idle_timeout: GPU-a5b02c30-9c95-cb81-e41e-ca204d57aa3b usage 0%
-2024-03-14 15:54:27,911: ERROR: gpu_idle_timeout: GPU-a5b02c30-9c95-cb81-e41e-ca204d57aa3b usage below threshhold 10% for last 50 seconds. Killing process.
-2024-03-14 15:54:27,911: ERROR: gpu_idle_timeout: process still alive, killing.
+$ python gpu_idle_timeout.py -t 50 -s 6 -n 5 -d 3 -x grep foo
+2024-03-15 11:04:29,052: INFO: gpu_idle_timeout: Starting GPU idle watcher: threshhold_percentage=50%, sample_freq=6, num_samples=5, delay_samples=3, window_size=30
+2024-03-15 11:04:35,055: INFO: gpu_idle_timeout: waiting for delay samples. 12 seconds left
+2024-03-15 11:04:41,061: INFO: gpu_idle_timeout: waiting for delay samples. 6 seconds left
+2024-03-15 11:04:47,084: DEBUG: gpu_idle_timeout: GPU-a5b02c30-9c95-cb81-e41e-ca204d57aa3b usage 0%
+2024-03-15 11:04:47,084: DEBUG: gpu_idle_timeout: GPU-b805d632-775b-c673-fe68-26b26996cd09 usage 0%
+2024-03-15 11:04:53,111: DEBUG: gpu_idle_timeout: GPU-a5b02c30-9c95-cb81-e41e-ca204d57aa3b usage 0%
+2024-03-15 11:04:53,111: DEBUG: gpu_idle_timeout: GPU-b805d632-775b-c673-fe68-26b26996cd09 usage 0%
+2024-03-15 11:04:59,135: DEBUG: gpu_idle_timeout: GPU-a5b02c30-9c95-cb81-e41e-ca204d57aa3b usage 0%
+2024-03-15 11:04:59,136: DEBUG: gpu_idle_timeout: GPU-b805d632-775b-c673-fe68-26b26996cd09 usage 0%
+2024-03-15 11:05:05,157: DEBUG: gpu_idle_timeout: GPU-a5b02c30-9c95-cb81-e41e-ca204d57aa3b usage 0%
+2024-03-15 11:05:05,157: DEBUG: gpu_idle_timeout: GPU-b805d632-775b-c673-fe68-26b26996cd09 usage 0%
+2024-03-15 11:05:11,182: DEBUG: gpu_idle_timeout: GPU-a5b02c30-9c95-cb81-e41e-ca204d57aa3b usage 0%
+2024-03-15 11:05:11,183: DEBUG: gpu_idle_timeout: GPU-b805d632-775b-c673-fe68-26b26996cd09 usage 0%
+2024-03-15 11:05:11,183: ERROR: gpu_idle_timeout: usage for all GPUs: ['GPU-a5b02c30-9c95-cb81-e41e-ca204d57aa3b', 'GPU-b805d632-775b-c673-fe68-26b26996cd09'] was below threshhold 50% for last 30 seconds. Killing process.
+2024-03-15 11:05:11,183: ERROR: gpu_idle_timeout: process still alive, maybe hung, killing.
 ```

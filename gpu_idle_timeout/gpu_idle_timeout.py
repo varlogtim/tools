@@ -62,6 +62,8 @@ class IdleGpuWatcher:
     def _check_idle(self) -> None:
         gpu_utils = self._get_nvidia_smi()
 
+        idle_gpus: dict[str, bool] = {k: False for k in gpu_utils.keys()}
+
         for gpu_uuid, gpu_util in gpu_utils.items():
             logging.debug(f"{gpu_uuid} usage {gpu_util}%")
             if self._gpu_util_samples.get(gpu_uuid) is None:
@@ -76,13 +78,17 @@ class IdleGpuWatcher:
                 s < self._threshhold_percentage
                 for s in self._gpu_util_samples[gpu_uuid]
             ):
-                logging.error(
-                    f"{gpu_uuid} usage below threshhold {self._threshhold_percentage}% "
-                    f"for last {self._sample_freq * self._num_samples} seconds. Killing process."
-                )
-                sys.exit(1)
+                idle_gpus[gpu_uuid] = True
 
             self._gpu_util_samples[gpu_uuid].popleft()
+
+        if all(idle for idle in idle_gpus.values()):
+            logging.error(
+                f"usage for all GPUs: {[uuid for uuid in idle_gpus.keys()]} was "
+                f"below threshhold {self._threshhold_percentage}% "
+                f"for last {self._sample_freq * self._num_samples} seconds. Killing process."
+            )
+            sys.exit(1)
 
     def watch_process(self, exec_command_and_args: list[str]) -> int:
         p = subprocess.Popen(exec_command_and_args)
@@ -109,7 +115,7 @@ class IdleGpuWatcher:
                 break
         finally:
             if p.poll() is None:
-                logging.error("process still alive, killing.")
+                logging.error("process still alive, maybe hung, killing.")
                 p.kill()  # SIGKILL because it is likely hung
 
         return p.wait()
@@ -170,7 +176,7 @@ if __name__ == "__main__":
         "--debug",
         default=False,
         action="store_true",
-        help="actually apply the changes",
+        help="Enable debug logging (reports GPU readings each sample period).",
     )
 
     parser.add_argument(
