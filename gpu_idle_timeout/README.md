@@ -22,7 +22,7 @@ optional arguments:
                         Number of samples in window used to evaluate GPU usage. Must be greater than 0. (default: 60)
   -d DELAY_SAMPLES, --delay-samples DELAY_SAMPLES
                         Number of samples to delay before evaluating GPU usage. (default: 12)
-  -x, --debug           actually apply the changes (default: False)
+  -x, --debug           Enable debug logging (reports GPU readings each sample period). (default: False)
 ```
 
 # Description
