@@ -1,8 +1,11 @@
 import argparse
 import collections
 import logging
+import os
+import psutil
 import re
 import sys
+import signal
 import time
 import subprocess
 import shutil
@@ -15,6 +18,8 @@ class IdleGpuWatcher:
         sample_freq: int,
         num_samples: int,
         delay_samples: int,
+        signal_code: int,
+        signal_children: bool,
     ):
         if not shutil.which("nvidia-smi"):
             raise RuntimeError("Unable to locate 'nvidia-smi'")
@@ -24,6 +29,8 @@ class IdleGpuWatcher:
         self._full_window = sample_freq * num_samples
         self._threshhold_percentage = threshhold_percentage
         self._delay_samples = delay_samples
+        self._signal_code = signal_code
+        self._signal_children = signal_children
 
         header_regstr = {
             "uuid": r"(?P<uuid>[a-zA-Z0-9-]+)",
@@ -59,7 +66,7 @@ class IdleGpuWatcher:
             output[data["uuid"]] = int(data["gpu_util"])
         return output
 
-    def _check_idle(self) -> None:
+    def _check_idle(self) -> bool:
         gpu_utils = self._get_nvidia_smi()
 
         idle_gpus: dict[str, bool] = {k: False for k in gpu_utils.keys()}
@@ -86,9 +93,30 @@ class IdleGpuWatcher:
             logging.error(
                 f"usage for all GPUs: {[uuid for uuid in idle_gpus.keys()]} was "
                 f"below threshhold {self._threshhold_percentage}% "
-                f"for last {self._sample_freq * self._num_samples} seconds. Killing process."
+                f"for last {self._sample_freq * self._num_samples} seconds."
             )
-            sys.exit(1)
+            return True
+        return False
+
+    def _flatten_process_tree(
+        self,
+        p: psutil.Process,
+        depth: int = 0,
+        proc_layers: list[list[psutil.Process]] = [],
+    ) -> list[list[psutil.Process]]:
+        # DFS and build process layers
+        if len(proc_layers) == depth:
+            proc_layers.append([])
+
+        proc_layers[depth].append(p)
+
+        children = p.children()
+        if children:
+            for cp in children:
+                self._flatten_process_tree(cp, depth + 1, proc_layers)
+
+        if depth == 0:
+            return proc_layers
 
     def watch_process(self, exec_command_and_args: list[str]) -> int:
         p = subprocess.Popen(exec_command_and_args)
@@ -110,9 +138,37 @@ class IdleGpuWatcher:
                         )
                         continue
 
-                    self._check_idle()
+                    if self._check_idle():
+                        if self._signal_children:
+                            proc_layers = self._flatten_process_tree(psutil.Process(p.pid))
+
+                            logging.info("signal children: logging process tree")
+                            for num, layer in enumerate(proc_layers):
+                                for proc in layer:
+                                    cmdline = " ".join(proc.cmdline())
+                                    logging.info(f"signal children: layer {num}: pid {proc.pid}: 'cmdline'")
+
+                            # ~ reverse layer order BFS signal the children
+                            logging.info("signal children: signalling started")
+                            for ii in range(len(proc_layers) - 1, 0, -1):
+                                for proc in proc_layers[ii]:
+                                    logging.info(
+                                        f"signal children: send signal {self._signal_code}"
+                                        f"to pid {proc.pid} in layer {ii}"
+                                    )
+                                    psutil.Process(proc.pid).send_signal(self._signal_code)
+
+                            logging.info("signal children: signaling ended")
+
+                        logging.info(f"Sending signal {self._signal_code} to process {p.pid}")
+                        p.send_signal(self._signal_code)
+                        time.sleep(3)  # Wait for signal handlers
+                        sys.exit(1)
+
                     continue
+
                 break
+
         finally:
             if p.poll() is None:
                 logging.error("process still alive, maybe hung, killing.")
@@ -172,6 +228,18 @@ if __name__ == "__main__":
         help="Number of samples to delay before evaluating GPU usage.",
     )
     parser.add_argument(
+        "--signal-name",
+        type=str,
+        default="SIGQUIT",
+        help="signal to send to the process before killing it.",
+    )
+    parser.add_argument(
+        "--signal-children",
+        default=False,
+        action="store_true",
+        help="Whether to signal the children of the process first."
+    )
+    parser.add_argument(
         "-x",
         "--debug",
         default=False,
@@ -215,6 +283,18 @@ if __name__ == "__main__":
         sys.stderr.write("\nERROR: NUM_SAMPLES must be greater than 0.\n")
         sys.exit(1)
 
+    try:
+        signal_code = int(getattr(signal, args.signal_name))
+    except AttributeError as e:
+        parser.print_help()
+        sys.stderr.write(f"\nERROR: unknown SIGNAL '{args.signal_name}'.\n")
+        sys.exit(1)
+
+    if args.num_samples < 1:
+        parser.print_help()
+        sys.stderr.write("\nERROR: NUM_SAMPLES must be greater than 0.\n")
+        sys.exit(1)
+
     if not shutil.which("nvidia-smi"):
         parser.print_help()
         sys.stderr.write("\nERROR: Unable to locate 'nvidia-smi'\n")
@@ -227,6 +307,8 @@ if __name__ == "__main__":
         sample_freq=args.sample_freq,
         num_samples=args.num_samples,
         delay_samples=args.delay_samples,
+        signal_code=signal_code,
+        signal_children=args.signal_children,
     )
 
     sys.exit(watcher.watch_process(args.exec_command_and_args))

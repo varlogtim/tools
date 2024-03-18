@@ -4,7 +4,7 @@ Launch a process and watch GPU usage. If usage drops below a threshhold for spec
 # Help
 ```
 $ python gpu_idle_timeout.py --help
-usage: gpu_idle_timeout [-h] [-t THRESHHOLD_PERCENTAGE] [-s SAMPLE_FREQ] [-n NUM_SAMPLES] [-d DELAY_SAMPLES] [-x] ...
+usage: gpu_idle_timeout [-h] [-t THRESHHOLD_PERCENTAGE] [-s SAMPLE_FREQ] [-n NUM_SAMPLES] [-d DELAY_SAMPLES] [--signal-name SIGNAL_NAME] [--signal-children] [-x] ...
 
 Launches a process and terminates when GPU usage drops below threshhold during sample window. Note: requires 'nvidia-smi' binary to be accessible in PATH
 
@@ -22,6 +22,9 @@ optional arguments:
                         Number of samples in window used to evaluate GPU usage. Must be greater than 0. (default: 60)
   -d DELAY_SAMPLES, --delay-samples DELAY_SAMPLES
                         Number of samples to delay before evaluating GPU usage. (default: 12)
+  --signal-name SIGNAL_NAME
+                        signal to send to the process before killing it. (default: SIGQUIT)
+  --signal-children     Whether to signal the children of the process first. (default: False)
   -x, --debug           Enable debug logging (reports GPU readings each sample period). (default: False)
 ```
 
