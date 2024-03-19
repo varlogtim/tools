@@ -146,7 +146,7 @@ class IdleGpuWatcher:
                             for num, layer in enumerate(proc_layers):
                                 for proc in layer:
                                     cmdline = " ".join(proc.cmdline())
-                                    logging.info(f"signal children: layer {num}: pid {proc.pid}: 'cmdline'")
+                                    logging.info(f"signal children: layer {num}: pid {proc.pid}: '{cmdline}'")
 
                             # ~ reverse layer order BFS signal the children
                             logging.info("signal children: signalling started")
